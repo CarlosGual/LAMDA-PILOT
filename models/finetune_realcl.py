@@ -25,7 +25,7 @@ class Learner(BaseLearner):
         self._cur_task += 1
 
         logging.info(
-            "Learning on {}-{}".format(self._known_classes, self._total_classes)
+            "Learning on task: {}".format(self._cur_task)
         )
 
         train_dataset = data_manager.get_dataset_realcl(
