@@ -11,20 +11,48 @@ class DataManager(object):
         self.args = args
         self.dataset_name = dataset_name
         self._setup_data(dataset_name, shuffle, seed)
-        assert init_cls <= len(self._class_order), "No enough classes."
-        self._increments = [init_cls]
-        while sum(self._increments) + increment < len(self._class_order):
-            self._increments.append(increment)
-        offset = len(self._class_order) - sum(self._increments)
-        if offset > 0:
-            self._increments.append(offset)
+        # Since we check if we are in a real cl scenario several times, we store it as a property
+        self._real_cl = 'real_cl' in self.args.keys() and self.args['real_cl'] == True
+        if self._real_cl:
+            # We are not working with increments, so must specify the number of tasks
+            assert self.args['nb_tasks'] is not None, "Number of tasks must be specified for real class scenario."
+            self._nb_tasks = self.args['nb_tasks']
+            self._used_train_examples = []
+            self._nb_train_examples_per_task = len(self._train_data) // self._nb_tasks
+            self._selected_train_classes = None
+        else:
+            assert init_cls <= len(self._class_order), "Not enough classes."
+            self._increments = [init_cls]
+            while sum(self._increments) + increment < len(self._class_order):
+                self._increments.append(increment)
+            offset = len(self._class_order) - sum(self._increments)
+            if offset > 0:
+                self._increments.append(offset)
             
     @property
     def nb_tasks(self):
-        return len(self._increments)
+        if self._real_cl:
+            return self._nb_tasks
+        else:
+            return len(self._increments)
+
+    @property
+    def selected_train_classes(self):
+        if self._real_cl:
+            if self._selected_train_classes is not None:
+                return self._selected_train_classes
+            else:
+                return ValueError("Unique classes are calculated after the first train dataset is sampled. Please, "
+                                  "run get_dataset_realcl in training mode first.")
+        else:
+            return ValueError("Unique classes are only available in real continual learning scenario.")
 
     def get_task_size(self, task):
-        return self._increments[task]
+        if self._real_cl:
+            # For the moment we are going to suppose an even distribution of examples per task
+            return len(self._class_order) // self._nb_tasks
+        else:
+            return self._increments[task]
 
     @property
     def nb_classes(self):
@@ -79,6 +107,67 @@ class DataManager(object):
             return data, targets, DummyDataset(data, targets, trsf, self.use_path)
         else:
             return DummyDataset(data, targets, trsf, self.use_path)
+
+    def get_dataset_realcl(
+        self, source, mode, selected_classes=None
+    ):
+        if source == "train":
+            x, y = self._train_data, self._train_targets
+
+            # First, delete the examples that have already been used
+            x = np.delete(x, self._used_train_examples, axis=0)
+            y = np.delete(y, self._used_train_examples, axis=0)
+
+            # Now, select the examples for the current task
+            assert x.shape[0] == y.shape[0], "Data size error! Data and labels must have the same size."
+            random_idxes = np.random.choice(x.shape[0], self._nb_train_examples_per_task, replace=False)
+
+            # Update the used examples
+            self._used_train_examples.extend(random_idxes)
+
+            # Get the data
+            data = x[random_idxes]
+            targets = y[random_idxes]
+
+            self._selected_train_classes = np.unique(targets)
+
+        elif source == "test":
+            x, y = self._test_data, self._test_targets
+
+            data, targets = [], []
+
+            for idx in selected_classes:
+                class_data, class_targets = self._select(
+                    x, y, low_range=idx, high_range=idx + 1
+                )
+                data.append(class_data)
+                targets.append(class_targets)
+
+            data, targets = np.concatenate(data), np.concatenate(targets)
+
+        else:
+            raise ValueError("Unknown data source {}.".format(source))
+
+        if mode == "train":
+            trsf = transforms.Compose([*self._train_trsf, *self._common_trsf])
+        elif mode == "flip":
+            trsf = transforms.Compose(
+                [
+                    *self._test_trsf,
+                    transforms.RandomHorizontalFlip(p=1.0),
+                    *self._common_trsf,
+                ]
+            )
+        elif mode == "test":
+            trsf = transforms.Compose([*self._test_trsf, *self._common_trsf])
+        else:
+            raise ValueError("Unknown mode {}.".format(mode))
+
+        return DummyDataset(data, targets, trsf, self.use_path)
+
+
+
+
 
     def get_dataset_with_split(
         self, indices, source, mode, appendent=None, val_samples_per_class=0
@@ -166,11 +255,13 @@ class DataManager(object):
         )
         self._test_targets = _map_new_class_index(self._test_targets, self._class_order)
 
-    def _select(self, x, y, low_range, high_range):
+    @staticmethod
+    def _select(x, y, low_range, high_range):
         idxes = np.where(np.logical_and(y >= low_range, y < high_range))[0]
         return x[idxes], y[idxes]
 
-    def _select_rmm(self, x, y, low_range, high_range, m_rate):
+    @staticmethod
+    def _select_rmm(x, y, low_range, high_range, m_rate):
         assert m_rate is not None
         if m_rate != 0:
             idxes = np.where(np.logical_and(y >= low_range, y < high_range))[0]
