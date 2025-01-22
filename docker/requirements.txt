@@ -1,0 +1,7 @@
+easydict
+timm
+tqdm
+wandb
+scipy
+scikit-learn
+numpy==1.26.3

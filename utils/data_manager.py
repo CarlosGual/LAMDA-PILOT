@@ -1,13 +1,14 @@
 import logging
 import numpy as np
 from PIL import Image
+from numpy.core.fromnumeric import argsort
 from torch.utils.data import Dataset
 from torchvision import transforms
 from utils.data import iCIFAR10, iCIFAR100, iImageNet100, iImageNet1000, iCIFAR224, iImageNetR,iImageNetA,CUB, objectnet, omnibenchmark, vtab
 
 
 class DataManager(object):
-    def __init__(self, dataset_name, shuffle, seed, init_cls, increment, args):
+    def __init__(self, dataset_name, shuffle, seed, args):
         self.args = args
         self.dataset_name = dataset_name
         self._setup_data(dataset_name, shuffle, seed)
@@ -21,10 +22,10 @@ class DataManager(object):
             self._nb_train_examples_per_task = len(self._train_data) // self._nb_tasks
             self._selected_train_classes = None
         else:
-            assert init_cls <= len(self._class_order), "Not enough classes."
-            self._increments = [init_cls]
-            while sum(self._increments) + increment < len(self._class_order):
-                self._increments.append(increment)
+            assert args['init_cls'] <= len(self._class_order), "Not enough classes."
+            self._increments = [args['init_cls']]
+            while sum(self._increments) + args['increment'] < len(self._class_order):
+                self._increments.append(args['increment'])
             offset = len(self._class_order) - sum(self._increments)
             if offset > 0:
                 self._increments.append(offset)

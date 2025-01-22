@@ -36,14 +36,15 @@ class Learner(BaseLearner):
             source="test", mode="test", selected_classes=selected_train_classes
         )
 
-        self._total_classes = 100
-        self._network.update_fc(self._total_classes)
+        self._total_classes = selected_train_classes
+        self._network.update_fc(len(self._total_classes))
+        pin_memory = True if self._device.type == 'cuda' else False
 
         self.train_loader = DataLoader(
-            train_dataset, batch_size=self.args["batch_size"], shuffle=True, num_workers=num_workers
+            train_dataset, batch_size=self.args["batch_size"], shuffle=True, num_workers=num_workers, pin_memory=pin_memory
         )
         self.test_loader = DataLoader(
-            test_dataset, batch_size=self.args["batch_size"], shuffle=False, num_workers=num_workers
+            test_dataset, batch_size=self.args["batch_size"], shuffle=False, num_workers=num_workers, pin_memory=pin_memory
         )
 
         if len(self._multiple_gpus) > 1:
@@ -102,19 +103,21 @@ class Learner(BaseLearner):
 
             if epoch % 5 == 0:
                 test_acc = self._compute_accuracy(self._network, test_loader)
-                info = "Task {}, Epoch {}/{} => Loss {:.3f}, Train_accy {:.2f}%, Test_accy {:.2f}%".format(
+                info = "Task {}, Epoch {}/{}, Nº classes {} => Loss {:.3f}, Train_accy {:.2f}%, Test_accy {:.2f}%".format(
                     self._cur_task,
                     epoch + 1,
                     self.args["init_epoch"],
+                    len(self._total_classes),
                     losses / len(train_loader),
                     train_acc,
                     test_acc,
                 )
             else:
-                info = "Task {}, Epoch {}/{} => Loss {:.3f}%, Train_accy {:.2f}%".format(
+                info = "Task {}, Epoch {}/{}, Nº classes {} => Loss {:.3f}%, Train_accy {:.2f}%".format(
                     self._cur_task,
                     epoch + 1,
                     self.args["init_epoch"],
+                    len(self._total_classes),
                     losses / len(train_loader),
                     train_acc,
                 )

@@ -2,6 +2,7 @@ import copy
 import logging
 import numpy as np
 import torch
+from sklearn.metrics import confusion_matrix
 from torch import nn
 from torch.utils.data import DataLoader
 from utils.toolkit import tensor2numpy, accuracy
@@ -109,7 +110,7 @@ class BaseLearner(object):
             (y_pred.T == np.tile(y_true, (self.topk, 1))).sum() * 100 / len(y_true),
             decimals=2,
         )
-
+        ret['cm'] = confusion_matrix(y_true, y_pred.T[0])
         return ret
 
     def eval_task(self):

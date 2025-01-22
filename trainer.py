@@ -5,6 +5,7 @@ import torch
 from utils import factory
 from utils.data_manager import DataManager
 from utils.toolkit import count_parameters
+from utils.writer import get_writer
 import os
 import numpy as np
 
@@ -21,21 +22,34 @@ def train(args):
 
 def _train(args):
 
-    init_cls = 0 if args ["init_cls"] == args["increment"] else args["init_cls"]
-    logs_name = "logs/{}/{}/{}/{}".format(args["model_name"],args["dataset"], init_cls, args['increment'])
+    if 'real_cl' not in args.keys() or args['real_cl'] is False:
+        init_cls = 0 if args ["init_cls"] == args["increment"] else args["init_cls"]
+        logs_name = "logs/{}/{}/{}/{}".format(args["model_name"], args["dataset"], init_cls, args['increment'])
+
+        logfilename = "logs/{}/{}/{}/{}/{}_{}_{}".format(
+            args["model_name"],
+            args["dataset"],
+            init_cls,
+            args["increment"],
+            args["prefix"],
+            args["seed"],
+            args["backbone_type"],
+        )
+
+    else:
+        logs_name = "logs/{}/{}/{}".format(args["model_name"], args["dataset"], args["nb_tasks"])
+        logfilename = "logs/{}/{}/{}/{}_{}_{}".format(
+            args["model_name"],
+            args["dataset"],
+            args["nb_tasks"],
+            args["prefix"],
+            args["seed"],
+            args["backbone_type"],
+        )
     
     if not os.path.exists(logs_name):
         os.makedirs(logs_name)
 
-    logfilename = "logs/{}/{}/{}/{}/{}_{}_{}".format(
-        args["model_name"],
-        args["dataset"],
-        init_cls,
-        args["increment"],
-        args["prefix"],
-        args["seed"],
-        args["backbone_type"],
-    )
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(filename)s] => %(message)s",
@@ -53,8 +67,6 @@ def _train(args):
         args["dataset"],
         args["shuffle"],
         args["seed"],
-        args["init_cls"],
-        args["increment"],
         args,
     )
     
@@ -62,8 +74,19 @@ def _train(args):
     args["nb_tasks"] = data_manager.nb_tasks
     model = factory.get_model(args["model_name"], args)
 
+    if 'wandb_enabled' in args.keys() and args["wandb_enabled"] is True:
+        args["run_name"] = logfilename.replace("logs/", "").replace("/", "_")
+        writer = get_writer(args)
+        writer.define_metric("Task")
+        writer.define_metric("Task Accuracy", step_metric="Task")
+        writer.define_metric("Task Forgetting", step_metric="Task")
+
+    else:
+        writer = None
+
     cnn_curve, nme_curve = {"top1": [], "top5": []}, {"top1": [], "top5": []}
     cnn_matrix, nme_matrix = [], []
+    previous_accuracy = 0.0
 
     for task in range(data_manager.nb_tasks):
         logging.info("All params: {}".format(count_parameters(model._network)))
@@ -72,7 +95,9 @@ def _train(args):
         )
         model.incremental_train(data_manager)
         cnn_accy, nme_accy = model.eval_task()
+        actual_class_mask = data_manager.selected_train_classes
         model.after_task()
+
 
         if nme_accy is not None:
             logging.info("CNN: {}".format(cnn_accy["grouped"]))
@@ -103,21 +128,44 @@ def _train(args):
             logging.info("Average Accuracy (CNN): {}".format(sum(cnn_curve["top1"])/len(cnn_curve["top1"])))
             logging.info("Average Accuracy (NME): {}".format(sum(nme_curve["top1"])/len(nme_curve["top1"])))
         else:
-            logging.info("No NME accuracy.")
-            logging.info("CNN: {}".format(cnn_accy["grouped"]))
+            # logging.info("No NME accuracy.")
+            # logging.info("CNN: {}".format(cnn_accy["grouped"]))
+            #
+            # cnn_keys = [key for key in cnn_accy["grouped"].keys() if '-' in key]
+            # cnn_values = [cnn_accy["grouped"][key] for key in cnn_keys]
+            # cnn_matrix.append(cnn_values)
+            #
+            # cnn_curve["top1"].append(cnn_accy["top1"])
+            # cnn_curve["top5"].append(cnn_accy["top5"])
+            #
+            # logging.info("CNN top1 curve: {}".format(cnn_curve["top1"]))
+            # logging.info("CNN top5 curve: {}\n".format(cnn_curve["top5"]))
 
-            cnn_keys = [key for key in cnn_accy["grouped"].keys() if '-' in key]
-            cnn_values = [cnn_accy["grouped"][key] for key in cnn_keys]
-            cnn_matrix.append(cnn_values)
+            actual_accuracy = cnn_accy['top1']
 
-            cnn_curve["top1"].append(cnn_accy["top1"])
-            cnn_curve["top5"].append(cnn_accy["top5"])
+            # Calculate forgetting same as nadia
+            if task == 0:
+                old_class_mask = actual_class_mask
+                previous_accuracy = actual_accuracy
+                task_forgetting = 0
+            else:
+                masked_confusion_matrix = cnn_accy['cm'] * old_class_mask
+                old_tasks_acc =  np.around((masked_confusion_matrix.diagonal().sum() / masked_confusion_matrix.sum()) * 100, decimals=2)
+                old_class_mask = actual_class_mask
+                task_forgetting = previous_accuracy - old_tasks_acc
 
-            logging.info("CNN top1 curve: {}".format(cnn_curve["top1"]))
-            logging.info("CNN top5 curve: {}\n".format(cnn_curve["top5"]))
+            logging.info("Average Task Accuracy (CNN): {}".format(actual_accuracy))
+            logging.info("Average Task Forgetting (CNN): {}\n".format(task_forgetting))
 
-            print('Average Accuracy (CNN):', sum(cnn_curve["top1"])/len(cnn_curve["top1"]))
-            logging.info("Average Accuracy (CNN): {} \n".format(sum(cnn_curve["top1"])/len(cnn_curve["top1"])))
+            if writer is not None:
+                log_dict = {
+                    "Task Accuracy": actual_accuracy,
+                    "Task Forgetting": task_forgetting,
+                    "Task": int(task)
+                }
+                writer.add_scalars(log_dict)
+
+
 
     if 'print_forget' in args.keys() and args['print_forget'] is True:
         if len(cnn_matrix) > 0:

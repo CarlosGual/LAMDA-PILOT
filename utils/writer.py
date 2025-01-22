@@ -32,8 +32,6 @@ class WeightsAndBiasesWriter:
             wb_kwargs["name"] = args['run_name']
         if args['entity'] != "":
             wb_kwargs["entity"] = args['entity']
-        if args['group'] != "":
-            wb_kwargs["group"] = args['group']
         if wandb is None:
             raise ValueError(
                 "Requested to log with wandb, but wandb is not installed"
@@ -43,9 +41,7 @@ class WeightsAndBiasesWriter:
             wb_kwargs["resume"] = "must"
 
         self.run = wandb.init(  # type: ignore[attr-defined]
-            config={
-                args,  # type: ignore[arg-type]
-            },
+            config=args,
             **wb_kwargs,
         )
 
@@ -55,15 +51,24 @@ class WeightsAndBiasesWriter:
         else:
             return lambda *args, **kwargs: None
 
-    def add_scalars(self, log_group, data_dict, step_id):
-        log_data_dict = {
-            f"{log_group}/{k.replace(' ', '')}": v
-            for k, v in data_dict.items()
-        }
-        wandb.log(log_data_dict, step=int(step_id))  # type: ignore[attr-defined]
+    @staticmethod
+    def add_scalars(data_dict, step_id: int = None, log_group: str = None):
+        if log_group is not None:
+            log_data_dict = {
+                f"{log_group}/{k.replace(' ', '')}": v
+                for k, v in data_dict.items()
+            }
+        else:
+            log_data_dict = data_dict
+        wandb.log(log_data_dict, step=step_id)  # type: ignore[attr-defined]
 
-    def add_scalar(self, key, value, step_id):
-        wandb.log({key: value}, step=int(step_id))  # type: ignore[attr-defined]
+    @staticmethod
+    def add_scalar(key, value, step_id: int = None):
+        wandb.log({key: value}, step=step_id)  # type: ignore[attr-defined]
+
+    @staticmethod
+    def define_metric(name: str, step_metric: str = None, summary: str = "mean"):
+        wandb.define_metric(name, step_metric=step_metric, summary=summary)  # type: ignore[attr-defined]
 
     def __enter__(self):
         return self

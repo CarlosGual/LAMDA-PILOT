@@ -11,8 +11,8 @@
     "nb_tasks": 20,
     "model_name": "finetune_realcl",
     "backbone_type": "vit_base_patch16_224",
-    "device": ["0"],
-    "seed": [1993, 1994, 1995, 1996, 1997],
+    "device": ["0", "1"],
+    "seed": [1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002],
 
     "wandb_enabled": true,
     "project_name": "pilot",
