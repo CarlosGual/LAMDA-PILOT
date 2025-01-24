@@ -153,6 +153,7 @@ def _train(args):
                 old_tasks_acc =  np.around((masked_confusion_matrix.diagonal().sum() / masked_confusion_matrix.sum()) * 100, decimals=2)
                 old_class_mask = actual_class_mask
                 task_forgetting = previous_accuracy - old_tasks_acc
+                previous_accuracy = actual_accuracy
 
             logging.info("Average Task Accuracy (CNN): {}".format(actual_accuracy))
             logging.info("Average Task Forgetting (CNN): {}\n".format(task_forgetting))
