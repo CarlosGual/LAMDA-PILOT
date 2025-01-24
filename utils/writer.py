@@ -79,3 +79,7 @@ class WeightsAndBiasesWriter:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.run:
             self.run.finish()
+
+    def finish(self):
+        if self.run:
+            self.run.finish()

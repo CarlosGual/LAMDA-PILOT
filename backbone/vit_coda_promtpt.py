@@ -10,8 +10,8 @@ import torch.nn.functional as F
 from functools import partial
 
 from timm.models.vision_transformer import _cfg, PatchEmbed
-from timm.models.registry import register_model
-from timm.models.layers import trunc_normal_, DropPath
+from timm.models import register_model
+from timm.layers import trunc_normal_, DropPath
 from timm.models.helpers import build_model_with_cfg, resolve_pretrained_cfg, named_apply, adapt_input_conv, checkpoint_seq
 from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
 

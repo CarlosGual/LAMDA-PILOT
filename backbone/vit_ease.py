@@ -6,7 +6,7 @@
 import math
 import torch
 import torch.nn as nn
-from timm.models.layers import DropPath
+from timm.layers import DropPath
 # --------------------------------------------------------
 # References:
 # timm: https://github.com/rwightman/pytorch-image-models/tree/master/timm
@@ -19,7 +19,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 from timm.models.vision_transformer import PatchEmbed
-from timm.models.registry import register_model
+from timm.models import register_model
 
 import logging
 import os

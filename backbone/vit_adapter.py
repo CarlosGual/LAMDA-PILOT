@@ -6,7 +6,7 @@
 import math
 import torch
 import torch.nn as nn
-from timm.models.layers import DropPath
+from timm.layers import DropPath
 # --------------------------------------------------------
 # References:
 # timm: https://github.com/rwightman/pytorch-image-models/tree/master/timm
@@ -19,7 +19,7 @@ from collections import OrderedDict
 import torch
 import torch.nn as nn
 from timm.models.vision_transformer import PatchEmbed
-from timm.models.registry import register_model
+from timm.models import register_model
 
 import logging
 import os
@@ -409,6 +409,60 @@ def vit_base_patch16_224_adapter(pretrained=False, **kwargs):
             p.requires_grad = False 
     return model
 
+
+def vit_base_patch32_224_clip_adapter(pretrained=False, **kwargs):
+    model = VisionTransformer(patch_size=32, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,
+                              norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+
+    # checkpoint_model = torch.load('./pretrained_models/B_16-i21k-300ep-lr_0.001-aug_medium1-wd_0.1-do_0.0-sd_0.0.npz')
+    checkpoint_model = timm.create_model("vit_base_patch32_clip_224", pretrained=True, num_classes=0)
+    state_dict = checkpoint_model.state_dict()
+    # modify the checkpoint state dict to match the model
+    # first, split qkv weight into q, k, v
+    for key in list(state_dict.keys()):
+        if 'qkv.weight' in key:
+            qkv_weight = state_dict.pop(key)
+            q_weight = qkv_weight[:768]
+            k_weight = qkv_weight[768:768 * 2]
+            v_weight = qkv_weight[768 * 2:]
+            state_dict[key.replace('qkv.weight', 'q_proj.weight')] = q_weight
+            state_dict[key.replace('qkv.weight', 'k_proj.weight')] = k_weight
+            state_dict[key.replace('qkv.weight', 'v_proj.weight')] = v_weight
+        elif 'qkv.bias' in key:
+            qkv_bias = state_dict.pop(key)
+            q_bias = qkv_bias[:768]
+            k_bias = qkv_bias[768:768 * 2]
+            v_bias = qkv_bias[768 * 2:]
+            state_dict[key.replace('qkv.bias', 'q_proj.bias')] = q_bias
+            state_dict[key.replace('qkv.bias', 'k_proj.bias')] = k_bias
+            state_dict[key.replace('qkv.bias', 'v_proj.bias')] = v_bias
+    # second, modify the mlp.fc.weight to match fc.weight
+    for key in list(state_dict.keys()):
+        if 'mlp.fc' in key:
+            fc_weight = state_dict.pop(key)
+            state_dict[key.replace('mlp.', '')] = fc_weight
+
+    msg = model.load_state_dict(state_dict, strict=False)
+    print(msg)
+
+    # s=model.state_dict()
+    # # print the keys in s
+    # for key in s.keys():
+    #     print(key)
+    # # print the keys in checkpoint_model
+    # for key in state_dict.keys():
+    #     if key in s.keys():
+    #         print(key, 'yes')
+    #     else:
+    #         print(key, 'NOOOOOOOOOOOOOOOOOOO')
+
+    # freeze all but the adapter
+    for name, p in model.named_parameters():
+        if name in msg.missing_keys:
+            p.requires_grad = True
+        else:
+            p.requires_grad = False
+    return model
 
 
 def vit_base_patch16_224_in21k_adapter(pretrained=False, **kwargs):

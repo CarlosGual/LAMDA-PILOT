@@ -10,6 +10,8 @@ def get_model(model_name, args):
         from models.aper_vpt import Learner 
     elif name == "aper_adapter":
         from models.aper_adapter import Learner
+    elif name == "aper_adapter_realcl":
+        from models.aper_adapter_realcl import Learner
     elif name == "l2p":
         from models.l2p import Learner
     elif name == "dualprompt":

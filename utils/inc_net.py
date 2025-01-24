@@ -64,7 +64,7 @@ def get_backbone(args, pretrained=False):
 
     elif '_adapter' in name:
         ffn_num = args["ffn_num"]
-        if args["model_name"] == "aper_adapter" or args["model_name"] == "ranpac" or args["model_name"] == "fecam":
+        if "aper_adapter" in args["model_name"] or args["model_name"] == "ranpac" or args["model_name"] == "fecam":
             from backbone import vit_adapter
             from easydict import EasyDict
             tuning_config = EasyDict(
@@ -82,6 +82,10 @@ def get_backbone(args, pretrained=False):
             )
             if name == "pretrained_vit_b16_224_adapter":
                 model = vit_adapter.vit_base_patch16_224_adapter(num_classes=0,
+                    global_pool=False, drop_path_rate=0.0, tuning_config=tuning_config)
+                model.out_dim=768
+            elif name == "pretrained_vit_b32_224_adapter":
+                model = vit_adapter.vit_base_patch32_224_adapter(num_classes=0,
                     global_pool=False, drop_path_rate=0.0, tuning_config=tuning_config)
                 model.out_dim=768
             elif name == "pretrained_vit_b16_224_in21k_adapter":
@@ -204,7 +208,7 @@ def get_backbone(args, pretrained=False):
         return model
     elif '_mos' in name:
         ffn_num = args["ffn_num"]
-        if args["model_name"] == "mos":
+        if "mos" in args["model_name"]:
             from backbone import vit_mos
             from easydict import EasyDict
             tuning_config = EasyDict(
@@ -692,7 +696,7 @@ class MultiBranchCosineIncrementalNet(BaseNet):
         return out
 
     
-    def construct_dual_branch_network(self, tuned_model):
+    def construct_dual_branch_network(self, tuned_model, nb_classes: int = None):
         if 'ssf' in self.args['backbone_type']:
             newargs=copy.deepcopy(self.args)
             newargs['backbone_type']=newargs['backbone_type'].replace('_ssf','')
@@ -713,8 +717,12 @@ class MultiBranchCosineIncrementalNet(BaseNet):
 
         self.backbones.append(tuned_model.backbone) #adappted tuned model
     
-        self._feature_dim = self.backbones[0].out_dim * len(self.backbones) 
-        self.fc=self.generate_fc(self._feature_dim,self.args['init_cls'])
+        self._feature_dim = self.backbones[0].out_dim * len(self.backbones)
+        if 'real_cl' in self.args.keys() and self.args['real_cl'] == True:
+            assert nb_classes is not None, 'nb_classes should be provided for real continual learning scenario'
+            self.fc=self.generate_fc(self._feature_dim, nb_classes)
+        else:
+            self.fc=self.generate_fc(self._feature_dim, self.args['init_cls'])
 
 
 class FOSTERNet(nn.Module):

@@ -189,6 +189,8 @@ def _train(args):
             print(np_acctable)
         logging.info('Forgetting (NME): {}'.format(forgetting))
 
+    writer.finish() if writer is not None else None
+
 
 def _set_device(args):
     device_type = args["device"]

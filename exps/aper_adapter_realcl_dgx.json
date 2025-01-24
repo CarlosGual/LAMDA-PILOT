@@ -1,0 +1,31 @@
+{
+    "prefix": "real_cl",
+    "dataset": "cifar224",
+    "memory_size": 0,
+    "memory_per_class": 0,
+    "fixed_memory": false,
+    "shuffle": true,
+    "real_cl": true,
+    "init_cls": 10,
+    "increment": 10,
+    "nb_tasks": 20,
+    "model_name": "aper_adapter_realcl",
+    "backbone_type": "pretrained_vit_b16_224_adapter",
+    "device": ["0"],
+    "seed": [1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002],
+
+    "wandb_enabled": false,
+    "project_name": "pilot",
+    "entity": "gram-uah",
+
+    "tuned_epoch":20,
+    "init_lr":0.01,
+    "batch_size":48,
+    "weight_decay":0.0005,
+    "min_lr":0,
+    "ffn_num":64,
+    "optimizer":"sgd",
+    "vpt_type":"shallow",
+    "prompt_token_num":5
+}
+

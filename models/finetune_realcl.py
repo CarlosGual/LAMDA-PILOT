@@ -38,13 +38,12 @@ class Learner(BaseLearner):
 
         self._total_classes = selected_train_classes
         self._network.update_fc(len(self._total_classes))
-        pin_memory = True if self._device.type == 'cuda' else False
 
         self.train_loader = DataLoader(
-            train_dataset, batch_size=self.args["batch_size"], shuffle=True, num_workers=num_workers, pin_memory=pin_memory
+            train_dataset, batch_size=self.args["batch_size"], shuffle=True, num_workers=num_workers
         )
         self.test_loader = DataLoader(
-            test_dataset, batch_size=self.args["batch_size"], shuffle=False, num_workers=num_workers, pin_memory=pin_memory
+            test_dataset, batch_size=self.args["batch_size"], shuffle=False, num_workers=num_workers
         )
 
         if len(self._multiple_gpus) > 1:

@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import logging
 import math
 from functools import partial
-from timm.models.registry import register_model
+from timm.models import register_model
 from timm.models.helpers import build_model_with_cfg, resolve_pretrained_cfg, named_apply, adapt_input_conv, checkpoint_seq
 
 from timm.data import (
@@ -16,13 +16,13 @@ from timm.data import (
     IMAGENET_INCEPTION_STD,
 )
 
-from timm.models.layers import (
+from timm.layers import (
     DropPath,
     PatchEmbed,
     lecun_normal_,
     trunc_normal_,
 )
-from timm.models.layers.helpers import to_2tuple
+from timm.layers.helpers import to_2tuple
 
 _logger = logging.getLogger(__name__)
 
