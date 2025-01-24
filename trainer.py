@@ -94,10 +94,13 @@ def _train(args):
             "Trainable params: {}".format(count_parameters(model._network, True))
         )
         model.incremental_train(data_manager)
-        cnn_accy, nme_accy = model.eval_task()
-        actual_class_mask = data_manager.selected_train_classes
         model.after_task()
-
+        cnn_accy, nme_accy = model.eval_task()
+        if 'real_cl' in args.keys() and args['real_cl'] is True:
+            actual_class_mask = data_manager.selected_train_classes
+        else:
+            # For compatibility with no real cl scenario
+            actual_class_mask = np.concatenate((np.arange(data_manager.get_task_size(task)*(task+1)), [0, 0, 0, 0, 0]))
 
         if nme_accy is not None:
             logging.info("CNN: {}".format(cnn_accy["grouped"]))

@@ -410,7 +410,7 @@ def vit_base_patch16_224_adapter(pretrained=False, **kwargs):
     return model
 
 
-def vit_base_patch32_224_clip_adapter(pretrained=False, **kwargs):
+def vit_base_patch32_clip_224_adapter(pretrained=False, **kwargs):
     model = VisionTransformer(patch_size=32, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,
                               norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
 

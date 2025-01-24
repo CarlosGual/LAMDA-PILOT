@@ -13,6 +13,10 @@ def get_backbone(args, pretrained=False):
         model = timm.create_model("vit_base_patch16_224",pretrained=True, num_classes=0)
         model.out_dim = 768
         return model.eval()
+    elif name == "pretrained_vit_b32_clip_224" or name == "vit_base_patch32_clip_224":
+        model = timm.create_model("vit_base_patch32_clip_224",pretrained=True, num_classes=0)
+        model.out_dim = 768
+        return model.eval()
     elif name == "pretrained_vit_b16_224_in21k" or name == "vit_base_patch16_224_in21k":
         model = timm.create_model("vit_base_patch16_224_in21k",pretrained=True, num_classes=0)
         model.out_dim = 768
@@ -84,8 +88,8 @@ def get_backbone(args, pretrained=False):
                 model = vit_adapter.vit_base_patch16_224_adapter(num_classes=0,
                     global_pool=False, drop_path_rate=0.0, tuning_config=tuning_config)
                 model.out_dim=768
-            elif name == "pretrained_vit_b32_224_adapter":
-                model = vit_adapter.vit_base_patch32_224_adapter(num_classes=0,
+            elif name == "pretrained_vit_b32_clip_224_adapter":
+                model = vit_adapter.vit_base_patch32_clip_224_adapter(num_classes=0,
                     global_pool=False, drop_path_rate=0.0, tuning_config=tuning_config)
                 model.out_dim=768
             elif name == "pretrained_vit_b16_224_in21k_adapter":
