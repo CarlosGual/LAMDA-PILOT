@@ -20,6 +20,7 @@ class BaseLearner(object):
         self._old_network = None
         self._data_memory, self._targets_memory = np.array([]), np.array([])
         self.topk = 5
+        self._nb_classes = None
 
         self._memory_size = args["memory_size"]
         self._memory_per_class = args.get("memory_per_class", None)
@@ -110,7 +111,10 @@ class BaseLearner(object):
             (y_pred.T == np.tile(y_true, (self.topk, 1))).sum() * 100 / len(y_true),
             decimals=2,
         )
-        ret['cm'] = confusion_matrix(y_true, y_pred.T[0])
+        if self._nb_classes is not None:
+            ret['cm'] = confusion_matrix(y_true, y_pred.T[0], labels=np.arange(self._nb_classes))
+        else:
+            ret['cm'] = confusion_matrix(y_true, y_pred.T[0])
         return ret
 
     def eval_task(self):

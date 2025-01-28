@@ -131,6 +131,7 @@ class DataManager(object):
             targets = y[random_idxes]
 
             self._selected_train_classes = np.unique(targets)
+            continual_label_transform = ReorderTargets(self._selected_train_classes)
 
         elif source == "test":
             x, y = self._test_data, self._test_targets
@@ -145,6 +146,8 @@ class DataManager(object):
                 targets.append(class_targets)
 
             data, targets = np.concatenate(data), np.concatenate(targets)
+
+            continual_label_transform = ReorderTargets(selected_classes)
 
         else:
             raise ValueError("Unknown data source {}.".format(source))
@@ -164,7 +167,7 @@ class DataManager(object):
         else:
             raise ValueError("Unknown mode {}.".format(mode))
 
-        return DummyDataset(data, targets, trsf, self.use_path)
+        return DummyDataset(data, targets, trsf, self.use_path, target_transform=continual_label_transform)
 
 
 
@@ -281,12 +284,13 @@ class DataManager(object):
 
 
 class DummyDataset(Dataset):
-    def __init__(self, images, labels, trsf, use_path=False):
+    def __init__(self, images, labels, trsf, use_path=False, target_transform=None):
         assert len(images) == len(labels), "Data size error!"
         self.images = images
         self.labels = labels
         self.trsf = trsf
         self.use_path = use_path
+        self.target_transform = target_transform
 
     def __len__(self):
         return len(self.images)
@@ -297,6 +301,9 @@ class DummyDataset(Dataset):
         else:
             image = self.trsf(Image.fromarray(self.images[idx]))
         label = self.labels[idx]
+        # For compatibility with real continual learning scenario
+        if self.target_transform:
+            label = self.target_transform(label)
 
         return idx, image, label
 
@@ -372,3 +379,14 @@ def default_loader(path):
         return accimage_loader(path)
     else:
         return pil_loader(path)
+
+
+class ReorderTargets(object):
+    """
+    Converts the class-orders to 0 -- (n-1) irrespective of order passed.
+    """
+    def __init__(self, class_order):
+        self.class_order = np.array(class_order)
+
+    def __call__(self, target):
+        return np.where(self.class_order==target)[0][0]

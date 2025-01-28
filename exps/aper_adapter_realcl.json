@@ -1,6 +1,6 @@
 {
     "prefix": "real_cl",
-    "dataset": "cifar224",
+    "dataset": "cub",
     "memory_size": 0,
     "memory_per_class": 0,
     "fixed_memory": false,
@@ -18,7 +18,7 @@
     "project_name": "pilot",
     "entity": "gram-uah",
 
-    "tuned_epoch":1,
+    "tuned_epoch":20,
     "init_lr":0.01,
     "batch_size":48,
     "weight_decay":0.0005,

@@ -1,3 +1,4 @@
+import copy
 import logging
 import numpy as np
 import torch
@@ -54,14 +55,14 @@ class Learner(BaseLearner):
         embedding_list = torch.cat(embedding_list, dim=0)
         label_list = torch.cat(label_list, dim=0)
 
-        class_list = np.unique(self.train_loader.dataset.labels)
-        proto_list = []
+        class_list = np.unique(trainloader.dataset.labels)
         for class_index in class_list:
+            transformed_class_index = trainloader.dataset.target_transform(class_index)
             # print('Replacing...',class_index)
-            data_index = (label_list == class_index).nonzero().squeeze(-1)
+            data_index = (label_list == transformed_class_index).nonzero().squeeze(-1)
             embedding = embedding_list[data_index]
             proto = embedding.mean(0)
-            self._network.fc.weight.data[class_index] = proto
+            self._network.fc.weight.data[transformed_class_index] = proto
         return model
 
     def incremental_train(self, data_manager):
@@ -77,9 +78,12 @@ class Learner(BaseLearner):
         test_dataset = data_manager.get_dataset_realcl(
             source="test", mode="test", selected_classes=selected_train_classes
         )
-        train_dataset_for_protonet = data_manager.get_dataset_realcl(source="train", mode="test")
+        # Make the protonet dataset from the two others
+        train_dataset_for_protonet = copy.deepcopy(train_dataset)
+        train_dataset_for_protonet.trsf = test_dataset.trsf
 
         self._total_classes = selected_train_classes
+        self._nb_classes = data_manager.nb_classes
         self._network.update_fc(len(self._total_classes))
 
         self.train_loader = DataLoader(

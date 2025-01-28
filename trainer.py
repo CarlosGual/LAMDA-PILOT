@@ -97,7 +97,13 @@ def _train(args):
         model.after_task()
         cnn_accy, nme_accy = model.eval_task()
         if 'real_cl' in args.keys() and args['real_cl'] is True:
-            actual_class_mask = data_manager.selected_train_classes
+            # Assuming data_manager.selected_train_classes is a list or array of selected class indices
+            selected_classes = data_manager.selected_train_classes
+            total_classes = data_manager.nb_classes
+
+            # Create a mask with 0s in the indexes with no class
+            actual_class_mask = np.zeros(total_classes, dtype=int)
+            actual_class_mask[selected_classes] = 1
         else:
             # For compatibility with no real cl scenario
             actual_class_mask = np.concatenate((np.arange(data_manager.get_task_size(task)*(task+1)), [0, 0, 0, 0, 0]))
@@ -155,7 +161,7 @@ def _train(args):
                 masked_confusion_matrix = cnn_accy['cm'] * old_class_mask
                 old_tasks_acc =  np.around((masked_confusion_matrix.diagonal().sum() / masked_confusion_matrix.sum()) * 100, decimals=2)
                 old_class_mask = actual_class_mask
-                task_forgetting = previous_accuracy - old_tasks_acc
+                task_forgetting = np.around(previous_accuracy - old_tasks_acc, decimals=2)
                 previous_accuracy = actual_accuracy
 
             logging.info("Average Task Accuracy (CNN): {}".format(actual_accuracy))
@@ -168,8 +174,6 @@ def _train(args):
                     "Task": int(task)
                 }
                 writer.add_scalars(log_dict)
-
-
 
     if 'print_forget' in args.keys() and args['print_forget'] is True:
         if len(cnn_matrix) > 0:

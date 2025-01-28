@@ -1,6 +1,6 @@
 {
     "prefix": "no_realcl",
-    "dataset": "cifar224",
+    "dataset": "cub",
     "memory_size": 0,
     "memory_per_class": 0,
     "fixed_memory": false,

@@ -676,6 +676,8 @@ class MultiBranchCosineIncrementalNet(BaseNet):
             fc.sigma.data = self.fc.sigma.data
             if nextperiod_initialization is not None:
                 weight = torch.cat([weight, nextperiod_initialization])
+            elif nb_output > nb_classes:  # In the continual learning scenario can happen that the number of classes decreases, so keep the already learned classes
+                weight = weight
             else:
                 weight = torch.cat([weight, torch.zeros(nb_classes - nb_output, self._feature_dim).to(self._device)])
             fc.weight = nn.Parameter(weight)
