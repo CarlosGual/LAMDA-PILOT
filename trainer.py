@@ -106,7 +106,7 @@ def _train(args):
             actual_class_mask[selected_classes] = 1
         else:
             # For compatibility with no real cl scenario
-            actual_class_mask = np.concatenate((np.arange(data_manager.get_task_size(task)*(task+1)), [0, 0, 0, 0, 0]))
+            actual_class_mask = np.arange(data_manager.get_task_size(task)*(task+2))
 
         if nme_accy is not None:
             logging.info("CNN: {}".format(cnn_accy["grouped"]))
